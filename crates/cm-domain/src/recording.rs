@@ -10,6 +10,29 @@ pub enum TrackRole {
     Unknown,
 }
 
+impl TrackRole {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            TrackRole::Mix => "mix",
+            TrackRole::Game => "game",
+            TrackRole::Comms => "comms",
+            TrackRole::Mic => "mic",
+            TrackRole::Unknown => "unknown",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<TrackRole> {
+        Some(match s {
+            "mix" => TrackRole::Mix,
+            "game" => TrackRole::Game,
+            "comms" => TrackRole::Comms,
+            "mic" => TrackRole::Mic,
+            "unknown" => TrackRole::Unknown,
+            _ => return None,
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct AudioTrack {
     pub index: u32,

@@ -6,3 +6,11 @@ license.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+cm-domain = { version = "0.1.0", path = "../cm-domain" }
+rusqlite = { version = "0.43.0", features = ["bundled"] }
+thiserror = "2.0.21"
+
+[dev-dependencies]
+tempfile = "3.27.0"
