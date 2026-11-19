@@ -4,9 +4,27 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lib]
+name = "cm_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "cortes"
 path = "src/main.rs"
 
 [lints]
 workspace = true
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.8", features = ["derive"] }
+cm-domain = { version = "0.1.0", path = "../cm-domain" }
+cm-media = { version = "0.1.0", path = "../cm-media" }
+cm-store = { version = "0.1.0", path = "../cm-store" }
+serde = { version = "1.0.229", features = ["derive"] }
+toml = "1.2.1"
+
+[dev-dependencies]
+assert_cmd = "2.2.2"
+predicates = "3.1.4"
+tempfile = "3.27.0"

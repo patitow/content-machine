@@ -133,3 +133,4 @@ Se **ambos** falharem, o plano volta para Python com tipagem estrita e a mesma a
 ## Portões (resultados)
 
 - **S2 (toolchain Rust), 2026-11-18: PASSOU.** Rust 1.100.0 via rustup/winget, linker MSVC (VS Build Tools 18) presente. Workspace de 4 crates: build limpo 26 s (8,8 s de compilação); incremental ao tocar `cm-domain` 0,26 s (crates ainda vazios: reavaliar quando houver dependências pesadas). Critérios: limpo ≤ 3 min, incremental ≤ 15 s.
+- **Ingest em gravação real (Marco 0), 2026-11-18: PASSOU.** `cortes ingest` em `2025-11-30 14-45-52.mkv` (15,25 GB, 1597,6 s, 1080p60 HEVC, 1 faixa): **119,8 s** (~127 MB/s lidos do HDD), contra a meta de ≤ 1,3x a leitura crua (~157 s a 97 MB/s → ≤ 204 s). Saídas: áudio 102,2 MB (= duração × 16 kHz × 4 B, correto) e proxy de 23,8 MB (413 quadros-chave; essa gravação antiga tem quadro-chave a cada ~3,9 s, não 2 s). Usei esse arquivo e não o `2026-07-27 23-05-35.mkv` do plano porque este já estava no cache do Windows.
