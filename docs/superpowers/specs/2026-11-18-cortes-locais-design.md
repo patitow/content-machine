@@ -40,7 +40,7 @@ Por que um repositório próprio: as ferramentas de código aberto existentes (O
 ## Abordagens consideradas
 
 1. **Fork do OpenShorts (9k stars, MIT, MCP).** Mais rápido para ter algo. Mas herda a seleção por transcrição, que é o ponto fraco em gameplay, e uma base grande para entender e manter. Não resolve o que o Matheus pediu (controle total).
-2. **Pipeline próprio em camadas de sinais (escolhida).** FFmpeg + Python, sinais de áudio/movimento/fala/marcadores, IA só no fim. Dá controle e medição. Custa mais para construir.
+2. **Pipeline próprio em camadas de sinais (escolhida).** FFmpeg + Python, sinais de áudio/movimento/fala, IA só no fim. Dá controle e medição. Custa mais para construir.
 3. **Híbrido: próprio, com OpenShorts só como referência de comparação.** É o que a escolhida já inclui no teste cego; não é uma terceira arquitetura.
 
 O Matheus escolheu construir o próprio (2).
@@ -51,12 +51,11 @@ O Matheus escolheu construir o próprio (2).
 gravação(ões) → ingest → sinais → candidatos → (IA opcional) → render → saída + manifesto
 ```
 
-1. **ingest:** `ffprobe`; detecta faixas de áudio (Mix/Jogo/Mic) e, se existirem, arquivos separados do Source Record (webcam, jogo, mic).
+1. **ingest:** `ffprobe`; detecta faixas de áudio (Mix/Jogo/Comunicação/Mic) e, se existirem, arquivos separados do Source Record (webcam, jogo, mic).
 2. **sinais** (cada um gera uma série temporal normalizada, em módulos separados):
-   - energia/picos do áudio do **jogo** (faixa 2, ou mix nas gravações antigas);
-   - **fala e exclamação no microfone** (faster-whisper local; faixa 3 ou mix);
+   - energia/picos do áudio do **jogo** (faixa 2, ou mix nas gravações antigas; a faixa 3, Comunicação, tem as vozes do Discord e pode servir de sinal de reação);
+   - **fala e exclamação no microfone** (faster-whisper local; faixa 4 ou mix);
    - movimento e mudança de cena (FFmpeg);
-   - **marcadores** do Matheus (atalho no OBS), com peso alto.
 3. **candidatos:** funde os sinais com pesos configuráveis, cria janelas com margem antes e depois, junta janelas próximas, ajusta início e fim para fronteira de frase (a partir da transcrição).
 4. **IA (opcional):** recebe candidatos + transcrição + resumo dos sinais; devolve ordem, título e legenda. Se não houver IA configurada, usa só a pontuação dos sinais.
 5. **render:** 16:9 direto da fonte; 9:16 empilhado (webcam em cima, jogo embaixo) ou jogo recortado com webcam menor. Com Source Record, a composição usa os arquivos separados; sem ele, usa um retângulo de webcam configurado por sessão. Legendas queimadas, loudnorm, NVENC.
@@ -78,20 +77,24 @@ Uma interface com um método: dados os candidatos e a transcrição, devolve JSO
 1. **Gabarito:** o Matheus marca os melhores momentos nas 4 gameplays de teste (cerca de 96 min, ~15 a 25 por sessão): `2025-11-30 13-54-24`, `2025-11-30 14-45-52`, `2026-07-27 22-26-47`, `2026-07-27 23-05-35`. As reuniões e aulas servem de teste de "conteúdo falado".
 2. **Métricas:** recall (momentos marcados que foram encontrados, com tolerância de janela) e precisão nos K primeiros cortes sugeridos. Relatório gerado pelo `cortes eval`.
 3. **Teste cego** contra o OpenShorts nas mesmas gravações: o Matheus nota os cortes sem saber a origem.
-4. **Ablação:** medir o ganho de cada sinal (áudio, fala, movimento, marcador, IA) para saber o que realmente ajuda.
-5. **Gravar melhor daqui para frente:** 3 faixas de áudio (feito) e Source Record (pendente de instalação).
+4. **Ablação:** medir o ganho de cada sinal (áudio, fala, movimento, IA) para saber o que realmente ajuda.
+5. **Gravar melhor daqui para frente:** 4 faixas de áudio e Source Record na webcam (feitos).
 
 ## Setup do OBS
 
-- **Feito (2026-11-18):** perfil "Padrão" gravando 3 faixas: 1 Mix, 2 Jogo, 3 Mic. Microfone apontado para o HyperX SoloCast e sem mudo. Backups `*.bak-20261118-210439`.
-- **Pendente:** instalar o plugin **Source Record** (grava webcam, jogo e mic em arquivos separados, mesma linha do tempo). Instalação depende do Matheus (OBS fechado + permissão do Windows).
-- **Pendente:** atalho de marcador no OBS.
-- **Pendente:** fonte "Alpha S" aponta para dispositivo inexistente.
+- **Feito (2026-11-18):** perfil "Padrão" em 1080p**60**, faixa de cor Limited, HEVC CQP 19 (perfil main), gravando **4 faixas de áudio**: 1 Mix, 2 Jogo (dispositivo padrão do Windows), 3 Comunicação (dispositivo de comunicação do Windows, o Chat do fone), 4 Mic. Faixas separadas permitem reduzir ou aumentar cada uma na pós-edição (ex.: abaixar o jogo quando o Matheus fala, ou em cutscene).
+- **Feito:** Source Record 0.5.0 instalado, com um filtro **só na webcam** (arquivo separado, encoder H.264 leve). Filtro no jogo removido para evitar 3 encodes simultâneos.
+- **Feito:** Aitum Multistream desativado no OBS (desinstalação exigiria administrador).
+- **Não haverá marcador por atalho:** o fluxo é 100% automático, pós-gravação.
+- **Pendente (Matheus, a cada gravação):** apontar a captura de jogo para o BF6.
+- **Observação:** o dispositivo padrão de reprodução do Windows está no monitor (LS27DG30X), não no fone Game. O OBS segue o padrão atual do Windows para a faixa 2.
 
 ## Decisões do Matheus
 
 - Construir o próprio, local, com IA plugável.
-- Sem live vertical agora, logo sem Aitum Vertical.
+- Sem live vertical agora, logo sem Aitum.
+- **Tudo automático, sem apertar botão para marcar momentos.**
+- Áudio em faixas separadas: padrão (jogo) e comunicação, para ajustar volumes depois.
 - Acabamento (frases, volume, legendas, NVENC) e interface de IA com os três adaptadores: aprovados.
 - Gameplays de teste em `E:\.VIDEOS GRAVADOS\OBS`.
 
