@@ -1,5 +1,6 @@
 [workspace]
 resolver = "3"
+exclude = ["spikes"]
 members = ["crates/cm-domain", "crates/cm-media", "crates/cm-store", "crates/cm-cli"]
 
 [workspace.package]
