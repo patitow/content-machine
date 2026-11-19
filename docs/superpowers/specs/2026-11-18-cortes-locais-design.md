@@ -35,7 +35,7 @@ Por que um repositório próprio: as ferramentas de código aberto existentes (O
 
 - Windows 11, RTX 3060 (NVENC), ffmpeg instalado, Python 3.14.5 instalado; `uv` resolve as bibliotecas de ML em 3.12/3.13/3.14, mas o projeto fixará 3.12 via `uv`.
 - Gravações em `E:\.VIDEOS GRAVADOS\OBS` (82 arquivos, 95 GB, MKV HEVC 1080p60 ou 30). Todas as antigas têm **uma só faixa de áudio** (mix).
-- Repositórios do Matheus ficam em `C:\Users\msoli\projetos\<nome>`. Este: `C:\Users\msoli\projetos\content-machine` (local indicado e autorizado pelo Matheus).
+- Repositórios do Matheus ficam em `~/projetos\<nome>`. Este: `~/projetos\content-machine` (local indicado e autorizado pelo Matheus).
 - Segredos (API keys) nunca em texto aberto no repositório.
 
 ## Abordagens consideradas
