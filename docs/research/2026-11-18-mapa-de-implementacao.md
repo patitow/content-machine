@@ -99,13 +99,7 @@ Benchmarks de Whisper (nenhum em RTX 3060; números de outras placas): faster-wh
 
 ### Recomendação
 
-**Python 3.12 (gerenciado pelo `uv`) para a versão 1.** O maior risco do projeto é acertar a qualidade dos cortes, não a velocidade de execução. Isso pede iterar rápido em sinais, pesos e avaliação, onde Python é muito mais produtivo e tem tudo pronto em wheels. A performance real depende do FFmpeg e da GPU, que são as mesmas em qualquer linguagem.
-
-**Go não ajuda:** teria que chamar FFmpeg e Whisper como processos externos e não tem ecossistema de visão, então viraria só cola.
-
-**Rust é a melhor alternativa** se o objetivo for um binário distribuível e robusto no longo prazo. O custo é instalar a toolchain, resolver o build do whisper-rs com CUDA e iterar mais devagar nas heurísticas.
-
-**Caminho híbrido:** as etapas se falam por arquivos (JSON, Parquet, `.npy`) e pelo SQLite. Depois que a qualidade estiver validada, qualquer etapa quente (extração de sinais, render) pode ser reescrita em Rust sem mexer no resto.
+**Substituída pelo [ADR 0001](../adr/0001-arquitetura-e-linguagem.md)** depois de medir o desempenho nesta máquina e de o escopo crescer (API, UI web, MCP, skills, evolução por muitas sessões): **núcleo em Rust, workers de ML atrás de contrato, UI em TypeScript**. A recomendação anterior (Python na v1) valia para um escopo de script; os números medidos mostram que o cálculo não é o gargalo (disco e decode são), então a decisão se apoia em manutenção e arquitetura.
 
 ## 10. Estrutura do repositório
 
