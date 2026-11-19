@@ -36,12 +36,14 @@ Evidências externas: SDKs oficiais de MCP de nível 1 existem para Python, Go e
 
 ## Decisão
 
-**Núcleo em Rust**, com **modelos pesados como workers atrás de um contrato**, e **interface web em TypeScript**.
+**Núcleo em Rust** (um daemon local), com **modelos pesados como workers atrás de um contrato**, **interface em React + TypeScript dentro de uma casca Electron**, e **Claude Code como forma principal de uso** (MCP + skills).
 
 1. **Rust** para o núcleo: domínio, orquestrador de pipeline, cache, sinais (DSP), candidatos, planejamento de render, API HTTP (axum), MCP (`rmcp`), CLI, armazenamento. Motivo central: em um projeto longo, feito por muitas sessões, o **compilador é o guardião dos contratos** entre módulos; enums modelam os estados do pipeline; e o servidor concorrente não tem GIL.
 2. **Workers de ML** (Whisper, e o que não tiver caminho nativo bom) como **processos separados** falando um protocolo estável (JSON por stdin/stdout ou HTTP local), supervisionados pelo núcleo (readiness, timeout, reinício com backoff). Começam em Python (`faster-whisper`), porque é o caminho mais seguro nesta máquina; podem virar nativos (`ort`, `whisper-rs`) depois, sem mexer no resto, porque a porta (`Transcriber`, `FaceDetector`) é a mesma.
 3. **Python também como laboratório**, nunca como dependência do núcleo: experimentos de sinais e pesos leem os mesmos arquivos (`.npy`) e o mesmo SQLite. Sinais externos entram por **contrato de dados** (um executável que emite uma série), sem recompilar o núcleo.
-4. **Interface web:** SvelteKit (ou React) + Vite, servida pelo núcleo e embutida no binário (`rust-embed`) em release; em desenvolvimento, proxy para o Vite. REST + SSE para progresso. Vídeo por HTTP com `Range`. Só em `127.0.0.1`, com token. Tauri fica como opção futura de empacotamento, não de partida.
+4. **Interface:** React + Vite + TypeScript (escolha do Matheus: é o que ele mais conhece e o que melhor funciona com geração por IA). Servida pelo daemon e empacotada em uma **casca Electron** (Matheus não quer abrir linha de comando). REST + SSE para progresso. Só em `127.0.0.1`, com token por sessão.
+   - **Electron:** processo principal mínimo (janela, bandeja, instância única, início e término do daemon); `contextIsolation` ligado, sem `nodeIntegration`, preload mínimo; o daemon Rust vai como recurso do instalador (`electron-builder`). A UI não tem lógica de negócio, só fala com a API.
+   - **Pré-visualização:** a UI toca **proxies MP4 H.264** gerados no ingest, nunca o MKV/HEVC original. O Chromium não toca MKV e o suporte a HEVC é incerto (não verificado). O proxy é transcodificado depois da gravação, fora do jogo.
 5. **Armazenamento:** SQLite (WAL) para metadados, gabarito e avaliações; séries temporais e proxies em arquivos `.npy` (legíveis direto por NumPy no laboratório). Sem Postgres.
 6. **FFmpeg como processo externo** (não em processo): robusto, já tem NVENC/NVDEC, isola falhas. A camada `cm-media` encapsula o comando e valida a saída.
 
@@ -51,10 +53,19 @@ Evidências externas: SDKs oficiais de MCP de nível 1 existem para Python, Go e
 - **Go:** ótimo servidor e iteração rápida, mas sem tipos soma (estados do pipeline ficam frágeis), sem ecossistema de visão e DSP, então todo ML seria worker de qualquer forma e o ganho sobre Rust some. É a segunda opção.
 - **Rust 100%, sem workers:** elimina a fronteira de processos, mas coloca o build de CUDA/Whisper (CMake, LLVM, CUDA 13.0 vs. binários do `ort`) no caminho crítico antes de qualquer valor entregue.
 
+## Uso principal: Claude Code
+
+O Matheus quer abrir o Claude Code e pedir "gera os cortes do meu último vídeo" e o sistema se virar. Consequências de projeto:
+- **O MCP é cidadão de primeira classe**, não um extra. Operações de alto nível: `latest_recording`, `generate_clips(recording | "latest", options)`, `get_job`, `list_clips`, `get_manifest`. "Último vídeo" = gravação mais recente na pasta do OBS, resolvida pelo sistema, não pelo agente.
+- **Jobs assíncronos:** `generate_clips` devolve um `job_id` imediatamente; progresso por `get_job` e por notificações de progresso do MCP. Chamadas longas não ficam presas em um timeout.
+- **O daemon é a fonte única de estado.** O processo MCP (stdio) é um cliente fino: se o daemon não estiver rodando, **ele o inicia**, então funciona mesmo com o Electron fechado.
+- **Skill `gerar-cortes`:** Markdown que ensina o agente o fluxo (achar o último vídeo, gerar, conferir o manifesto, mostrar o resultado) usando só as tools do MCP.
+- **Opcional, coerente com "tudo automático":** vigia da pasta do OBS: quando uma gravação termina (arquivo estável), o ingest começa sozinho.
+
 ## Arquitetura (hexagonal)
 
 ```
-interfaces:  CLI | HTTP API + Web UI | MCP | skills (markdown que chamam CLI/MCP)
+interfaces:  Electron (UI React) | MCP (Claude Code) | HTTP API | CLI | skills (markdown)
                          │
 aplicação:   orquestrador de jobs (DAG) · cache por conteúdo · agendador de recursos (GPU, disco)
                          │
@@ -67,6 +78,7 @@ adaptadores: ffmpeg · worker Whisper · ort/YuNet · claude/openai-compat/ollam
 - **Cache por conteúdo:** cada etapa tem chave = hash(entradas + parâmetros + versão do código). Mudar pesos recalcula só a fusão, não a transcrição. É o que torna a calibração viável.
 - **Agendador de recursos:** semáforos para NVENC (1 render por vez), GPU de Whisper e disco do HDD (1 leitura sequencial por vez).
 - **Eventos de progresso** (SSE) emitidos por todas as etapas; a UI e o MCP consomem o mesmo fluxo.
+- **Sem prompts interativos em nenhum caminho:** tudo que o agente ou a UI aciona roda sem pedir nada ao usuário; erros voltam como dados estruturados.
 - **Skills e tools:** o MCP expõe as operações; as skills são arquivos Markdown que ensinam um agente a usar CLI/MCP. Ambas são camadas finas sobre a mesma API.
 
 ### Estrutura do repositório
@@ -74,7 +86,7 @@ adaptadores: ffmpeg · worker Whisper · ort/YuNet · claude/openai-compat/ollam
 ```
 crates/  cm-domain  cm-store  cm-media  cm-signals  cm-webcam  cm-candidates
          cm-render  cm-ranker  cm-pipeline  cm-api  cm-mcp  cm-cli
-ui/      (SvelteKit)
+ui/      (React + Vite + TS)  shell/ (Electron)
 workers/ whisper/ (Python, contrato JSON)   lab/ (notebooks e experimentos)
 eval/    gabarito, métricas, teste cego
 docs/    adr/  specs/  research/
@@ -97,8 +109,8 @@ docs/    adr/  specs/  research/
 3. Sinais + candidatos + `eval` com gabarito.
 4. Worker Whisper + fronteiras de frase + legendas.
 5. Adaptadores de IA + ranker.
-6. API + UI (revisão de cortes, ferramenta de gabarito).
-7. MCP + skills.
+6. **MCP + skill `gerar-cortes` (uso principal via Claude Code)**, antes da UI.
+7. API + UI React/Electron (revisão de cortes, ferramenta de gabarito).
 8. Endurecimento, kill feed do BF6.
 
 ## Portões de decisão (o que me faria mudar de ideia)
