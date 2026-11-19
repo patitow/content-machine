@@ -129,3 +129,7 @@ Se **ambos** falharem, o plano volta para Python com tipagem estrita e a mesma a
 - Mais trabalho inicial (toolchain, contratos, workers) em troca de um núcleo que resiste a muitas sessões de evolução.
 - Duas linguagens para manter (Rust + Python nos workers e laboratório): mitigado por contrato estável, supervisão e testes dos dois lados.
 - O gabarito do Matheus continua sendo o gargalo de validação, independente da linguagem.
+
+## Portões (resultados)
+
+- **S2 (toolchain Rust), 2026-11-18: PASSOU.** Rust 1.100.0 via rustup/winget, linker MSVC (VS Build Tools 18) presente. Workspace de 4 crates: build limpo 26 s (8,8 s de compilação); incremental ao tocar `cm-domain` 0,26 s (crates ainda vazios: reavaliar quando houver dependências pesadas). Critérios: limpo ≤ 3 min, incremental ≤ 15 s.
