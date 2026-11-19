@@ -385,6 +385,7 @@ dependencies = [
  "cm-media",
  "image",
  "ort",
+ "serde_json",
  "tempfile",
  "thiserror",
 ]
