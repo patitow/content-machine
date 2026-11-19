@@ -182,14 +182,21 @@ pub fn render_9x16(
         "-preset",
         "p5",
         "-cq",
-        "19",
+        "21",
         "-b:v",
         "0",
+        "-maxrate",
+        "14M",
+        "-bufsize",
+        "28M",
     ];
     match runner.run("ffmpeg", &args(rec, layout, start_s, dur_s, out, &nvenc)) {
         Ok(_) => Ok(()),
         Err(MediaError::NonZeroExit { .. }) => {
-            let x264 = ["-c:v", "libx264", "-preset", "medium", "-crf", "18"];
+            let x264 = [
+                "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-maxrate", "14M",
+                "-bufsize", "28M",
+            ];
             runner
                 .run("ffmpeg", &args(rec, layout, start_s, dur_s, out, &x264))
                 .map(|_| ())

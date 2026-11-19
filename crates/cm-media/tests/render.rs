@@ -114,6 +114,9 @@ fn falls_back_to_x264_when_nvenc_is_unavailable() {
     let calls = runner.calls.borrow();
     assert_eq!(calls.len(), 2);
     assert!(calls[1].iter().any(|a| a == "libx264"));
+    // Taxa limitada: cortes para postar não podem passar de ~14 Mbps.
+    assert!(calls[0].iter().any(|a| a == "-maxrate"));
+    assert!(calls[1].iter().any(|a| a == "-maxrate"));
 }
 
 fn red_on_green_source(dir: &std::path::Path, with_audio: bool) -> PathBuf {

@@ -13,6 +13,8 @@ const FRAME_EDGE_SCORE: f32 = 0.5;
 const BORDER_MIN_MEAN: f32 = 0.55;
 const CUTOUT_MAX_CONFIDENCE: f64 = 0.7;
 const MAX_AREA_FRACTION: f64 = 0.25;
+/// Pixels que os lados internos entram para dentro do retângulo achado.
+const INSET: i32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WebcamKind {
@@ -310,16 +312,42 @@ pub fn detect_webcam(frames: &[RgbFrame], faces: &[Vec<Face>]) -> WebcamOutcome 
         py,
     };
     let half = |v: u32| (v / 2) as i32;
-    let border = find_border(
+    let mut border = find_border(
         &edges,
         (half(seed.x), half(seed.y), half(seed.w), half(seed.h)),
     );
+    // Overlay nunca fica a poucos pixels da borda do quadro: uma "borda" ali é conteúdo
+    // da própria webcam (suporte de microfone, cortina), e vale a borda do quadro.
+    let (snap_x, snap_y) = (
+        (edges.w as f32 * 0.02) as i32,
+        (edges.h as f32 * 0.02) as i32,
+    );
+    if border.left <= snap_x {
+        border.left = 0;
+    }
+    if edges.w - border.right <= snap_x {
+        border.right = edges.w;
+    }
+    if border.top <= snap_y {
+        border.top = 0;
+    }
+    if edges.h - border.bottom <= snap_y {
+        border.bottom = edges.h;
+    }
 
+    // Lados internos entram 2 px para dentro: a borda achada pode errar 1 px em
+    // metade da resolução e o corte nunca pode levar pixel de jogo para a faixa da webcam.
+    let inset =
+        |pos: i32, is_edge: bool, sign: i32| pos * 2 + if is_edge { 0 } else { sign * INSET };
+    let left = inset(border.left, border.left == 0, 1);
+    let top = inset(border.top, border.top == 0, 1);
+    let right = inset(border.right, border.right == edges.w, -1);
+    let bottom = inset(border.bottom, border.bottom == edges.h, -1);
     let rect = Rect {
-        x: (border.left * 2) as u32,
-        y: (border.top * 2) as u32,
-        w: ((border.right - border.left) * 2) as u32,
-        h: ((border.bottom - border.top) * 2) as u32,
+        x: left.max(0) as u32,
+        y: top.max(0) as u32,
+        w: (right - left).max(0) as u32,
+        h: (bottom - top).max(0) as u32,
     };
     let source = WebcamSource::Detected;
     if border.mean_score >= BORDER_MIN_MEAN

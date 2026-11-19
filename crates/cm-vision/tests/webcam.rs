@@ -247,3 +247,43 @@ fn same_scene_at_double_resolution_gives_the_same_rect_scaled() {
         other => panic!("esperava Found, veio {other:?}"),
     }
 }
+
+/// Overlay colado na borda esquerda do quadro, com uma tira escura de 6 px por dentro
+/// (como o suporte do microfone na gravação real): a borda do quadro é que vale.
+#[test]
+fn internal_edge_near_the_frame_border_snaps_to_the_frame_edge() {
+    let scene = Scene {
+        cam: Rect {
+            x: 0,
+            y: 200,
+            w: 204,
+            h: 142,
+        },
+        border: true,
+        scale: 1,
+    };
+    let frames: Vec<RgbFrame> = (0..12)
+        .map(|i| {
+            let mut f = frame(&scene, i);
+            for y in 200..342u32 {
+                for x in 0..6u32 {
+                    let o = ((y * W + x) * 3) as usize;
+                    f.data[o..o + 3].fill(20);
+                }
+            }
+            f
+        })
+        .collect();
+    let faces = vec![vec![face_in(&scene)]; 12];
+    match detect_webcam(&frames, &faces) {
+        WebcamOutcome::Found { detection, .. } => {
+            assert_eq!(detection.rect.x, 0, "{:?}", detection.rect);
+            assert!(
+                detection.rect.iou(&scene.cam) >= 0.94,
+                "{:?}",
+                detection.rect
+            );
+        }
+        other => panic!("esperava Found, veio {other:?}"),
+    }
+}
