@@ -342,6 +342,7 @@ dependencies = [
  "cm-domain",
  "cm-media",
  "cm-store",
+ "cm-vision",
  "predicates",
  "serde",
  "tempfile",

@@ -21,6 +21,7 @@ clap = { version = "4.6.8", features = ["derive"] }
 cm-domain = { version = "0.1.0", path = "../cm-domain" }
 cm-media = { version = "0.1.0", path = "../cm-media" }
 cm-store = { version = "0.1.0", path = "../cm-store" }
+cm-vision = { version = "0.1.0", path = "../cm-vision" }
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.2.1"
 

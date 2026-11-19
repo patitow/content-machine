@@ -1,4 +1,7 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+
+use cm_domain::Rect;
 
 use anyhow::Context;
 use serde::Deserialize;
@@ -8,6 +11,9 @@ pub struct Config {
     pub obs_dir: PathBuf,
     pub cache_dir: PathBuf,
     pub db_path: PathBuf,
+    /// Retângulo manual da webcam por gravação (chave = nome do arquivo sem extensão).
+    pub webcam_overrides: HashMap<String, Rect>,
+    pub model_path: PathBuf,
 }
 
 #[derive(Deserialize, Default)]
@@ -15,6 +21,8 @@ struct RawConfig {
     obs_dir: Option<PathBuf>,
     cache_dir: Option<PathBuf>,
     db_path: Option<PathBuf>,
+    webcam_overrides: Option<HashMap<String, Rect>>,
+    model_path: Option<PathBuf>,
 }
 
 impl Config {
@@ -48,6 +56,32 @@ impl Config {
                 .unwrap_or_else(|| PathBuf::from(r"E:\.VIDEOS GRAVADOS\OBS")),
             db_path: raw.db_path.unwrap_or_else(|| cache_dir.join("cortes.db")),
             cache_dir,
+            webcam_overrides: raw.webcam_overrides.unwrap_or_default(),
+            model_path: raw.model_path.unwrap_or_else(default_model_path),
         })
     }
+}
+
+const MODEL_FILE: &str = "face_detection_yunet_2023mar.onnx";
+
+/// `CORTES_MODEL`, ou `models/` em algum diretório acima do executável (checkout do
+/// repositório), ou `%APPDATA%\content-machine\models`.
+fn default_model_path() -> PathBuf {
+    if let Some(p) = std::env::var_os("CORTES_MODEL") {
+        return PathBuf::from(p);
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        for dir in exe.ancestors().skip(1).take(6) {
+            let candidate = dir.join("models").join(MODEL_FILE);
+            if candidate.is_file() {
+                return candidate;
+            }
+        }
+    }
+    std::env::var_os("APPDATA")
+        .map(PathBuf::from)
+        .unwrap_or_default()
+        .join("content-machine")
+        .join("models")
+        .join(MODEL_FILE)
 }
