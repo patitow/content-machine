@@ -33,7 +33,7 @@ Por que um repositório próprio: as ferramentas de código aberto existentes (O
 
 ## Restrições
 
-- Windows 11, RTX 3060 (NVENC), ffmpeg instalado, Python 3.14.5 (versão nova demais para várias bibliotecas de ML; ver "Fica para o construtor").
+- Windows 11, RTX 3060 (NVENC), ffmpeg instalado, Python 3.14.5 instalado; `uv` resolve as bibliotecas de ML em 3.12/3.13/3.14, mas o projeto fixará 3.12 via `uv`.
 - Gravações em `E:\.VIDEOS GRAVADOS\OBS` (82 arquivos, 95 GB, MKV HEVC 1080p60 ou 30). Todas as antigas têm **uma só faixa de áudio** (mix).
 - Repositórios do Matheus ficam em `C:\Users\msoli\projetos\<nome>`. Este: `C:\Users\msoli\projetos\content-machine` (local indicado e autorizado pelo Matheus).
 - Segredos (API keys) nunca em texto aberto no repositório.
@@ -78,10 +78,9 @@ Uma interface com um método: dados os candidatos e a transcrição, devolve JSO
 Funcionalidade mapeada pelo Matheus como **obrigatória no produto final**: em todo corte vertical, a webcam deve **sempre** ser localizada, recortada e posta na tela no lugar certo (webcam em cima, jogo embaixo), sem configuração manual por sessão.
 
 **Cadeia de decisão (a primeira que funcionar vence):**
-1. **Arquivo do Source Record** da webcam, quando existe (sem detecção, recorte exato).
-2. **Detecção na gravação principal:** a webcam é um overlay estático sobre o jogo. O detector amostra quadros ao longo do vídeo e combina (a) detecção de rosto, (b) região de baixa variação temporal em contraste com o jogo ao redor, (c) bordas retangulares. Resultado: um retângulo por sessão, com pontuação de confiança.
-3. **Retângulo salvo** da última sessão parecida, se a confiança for baixa.
-4. **Sem webcam confiável:** corte só do jogo (nunca um recorte errado), com aviso no manifesto.
+1. **Detecção na gravação principal (caminho padrão):** a webcam é um overlay estático sobre o jogo. O detector amostra quadros ao longo do vídeo e combina (a) detecção de rosto, (b) região de baixa variação temporal em contraste com o jogo ao redor, (c) bordas retangulares. Resultado: um retângulo por sessão, com pontuação de confiança.
+2. **Retângulo salvo** da última sessão parecida, se a confiança for baixa.
+3. **Sem webcam confiável:** corte só do jogo (nunca um recorte errado), com aviso no manifesto.
 
 **Regras de composição:**
 - O recorte do jogo vem da região **central** do quadro, para excluir o overlay da webcam e os de chat/alertas nas laterais; a webcam entra em cima, do arquivo isolado ou recortada do quadro.
@@ -96,12 +95,13 @@ Funcionalidade mapeada pelo Matheus como **obrigatória no produto final**: em t
 2. **Métricas:** recall (momentos marcados que foram encontrados, com tolerância de janela) e precisão nos K primeiros cortes sugeridos. Relatório gerado pelo `cortes eval`.
 3. **Teste cego** contra o OpenShorts nas mesmas gravações: o Matheus nota os cortes sem saber a origem.
 4. **Ablação:** medir o ganho de cada sinal (áudio, fala, movimento, IA) para saber o que realmente ajuda.
-5. **Gravar melhor daqui para frente:** 4 faixas de áudio e Source Record na webcam (feitos).
+5. **Gravar melhor daqui para frente:** 4 faixas de áudio e webcam detectada na gravação principal (sem arquivo isolado).
 
 ## Setup do OBS
 
 - **Feito (2026-11-18):** perfil "Padrão" em 1080p**60**, faixa de cor Limited, HEVC CQP 19 (perfil main), gravando **4 faixas de áudio**: 1 Mix, 2 Jogo (dispositivo padrão do Windows), 3 Comunicação (dispositivo de comunicação do Windows, o Chat do fone), 4 Mic. Faixas separadas permitem reduzir ou aumentar cada uma na pós-edição (ex.: abaixar o jogo quando o Matheus fala, ou em cutscene).
-- **Feito:** Source Record 0.5.0 instalado, com um filtro **só na webcam** (arquivo separado, encoder H.264 leve). Filtro no jogo removido para evitar 3 encodes simultâneos.
+- **Decidido:** webcam **não** é gravada em arquivo separado; o pipeline a detecta na gravação principal (evita um encode a mais). O plugin Source Record fica instalado, sem filtros.
+- **Feito:** encoders ajustados: gravação HEVC NVENC p4, CQP 20, B-frames e AQ psicovisual; live H.264 CBR 6000 kbps p4; OBS com prioridade acima do normal. Ainda não validados em gravação real.
 - **Feito:** Aitum Multistream desativado no OBS (desinstalação exigiria administrador).
 - **Não haverá marcador por atalho:** o fluxo é 100% automático, pós-gravação.
 - **Pendente (Matheus, a cada gravação):** apontar a captura de jogo para o BF6.
@@ -126,7 +126,7 @@ Funcionalidade mapeada pelo Matheus como **obrigatória no produto final**: em t
 
 ## Fica para o construtor
 
-- **Versão do Python:** 3.14 provavelmente não tem pacotes de `faster-whisper`/`ctranslate2`/`mediapipe`; usar 3.12 em ambiente isolado (uv ou venv).
+- **Linguagem:** ver `docs/research/2026-11-18-mapa-de-implementacao.md` (recomendação: Python 3.12 na v1; decisão final do Matheus pendente).
 - Pesos iniciais dos sinais e limiares (calibrar com o gabarito).
 - Escolha do modelo Whisper (equilíbrio velocidade e precisão na 3060).
 - Estratégia de detecção/configuração do retângulo da webcam nas gravações antigas.
