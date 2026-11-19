@@ -268,7 +268,7 @@ fn anatomical(face: &Rect, frame_w: u32, frame_h: u32) -> Rect {
     let fy = f64::from(face.y);
     let left = (cx - 1.475 * fw).max(0.0);
     let right = (cx + 1.475 * fw).min(f64::from(frame_w));
-    let top = (fy - 0.33 * fh).max(0.0);
+    let top = (fy - 0.6 * fh).max(0.0);
     let bottom = (fy + 3.2 * fh).min(f64::from(frame_h));
     Rect {
         x: left as u32,
