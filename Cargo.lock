@@ -199,6 +199,9 @@ dependencies = [
 [[package]]
 name = "cm-domain"
 version = "0.1.0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "cm-media"
