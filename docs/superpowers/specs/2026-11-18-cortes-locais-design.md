@@ -16,6 +16,7 @@ Por que um repositório próprio: as ferramentas de código aberto existentes (O
 - Interface única de IA com três adaptadores: `claude` em modo headless, API compatível com OpenAI, modelo local (Ollama ou llama.cpp).
 - CLI como interface principal; servidor MCP fino por cima, expondo os mesmos comandos.
 - Acabamento: cortar em fronteiras de frase, normalizar volume, legendas, encode NVENC.
+- **Webcam inteligente no 9:16**: detectar, recortar e posicionar a webcam sempre, automaticamente (ver "Requisito central").
 
 ## Não objetivos
 
@@ -71,6 +72,23 @@ Uma interface com um método: dados os candidatos e a transcrição, devolve JSO
 
 - **CLI:** `cortes analyze | suggest | render | eval`.
 - **MCP:** servidor fino com as mesmas operações.
+
+## Requisito central: webcam inteligente no 9:16
+
+Funcionalidade mapeada pelo Matheus como **obrigatória no produto final**: em todo corte vertical, a webcam deve **sempre** ser localizada, recortada e posta na tela no lugar certo (webcam em cima, jogo embaixo), sem configuração manual por sessão.
+
+**Cadeia de decisão (a primeira que funcionar vence):**
+1. **Arquivo do Source Record** da webcam, quando existe (sem detecção, recorte exato).
+2. **Detecção na gravação principal:** a webcam é um overlay estático sobre o jogo. O detector amostra quadros ao longo do vídeo e combina (a) detecção de rosto, (b) região de baixa variação temporal em contraste com o jogo ao redor, (c) bordas retangulares. Resultado: um retângulo por sessão, com pontuação de confiança.
+3. **Retângulo salvo** da última sessão parecida, se a confiança for baixa.
+4. **Sem webcam confiável:** corte só do jogo (nunca um recorte errado), com aviso no manifesto.
+
+**Regras de composição:**
+- O recorte do jogo vem da região **central** do quadro, para excluir o overlay da webcam e os de chat/alertas nas laterais; a webcam entra em cima, do arquivo isolado ou recortada do quadro.
+- Proporção, margens e arredondamento do retângulo são validados (rosto dentro do retângulo, proporção plausível, estável ao longo do vídeo).
+- Substituição manual por arquivo de configuração por sessão, sempre possível, mas nunca necessária.
+
+**Critério de aceite:** nas 4 gameplays de teste (webcam em posições diferentes entre as sessões de novembro e julho), o retângulo detectado tem **IoU ≥ 0,9** contra o retângulo marcado à mão, e nenhum corte sai com webcam cortada ao meio ou com parte do jogo no lugar dela. Falha de detecção cai no passo 4, não em corte errado.
 
 ## Como garantir qualidade
 
