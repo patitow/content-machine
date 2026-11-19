@@ -1,0 +1,18 @@
+[package]
+name = "cm-vision"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+cm-domain = { version = "0.1.0", path = "../cm-domain" }
+cm-media = { version = "0.1.0", path = "../cm-media" }
+image = "0.25.10"
+ort = "2.0.0-rc.15"
+thiserror = "2.0.21"
+
+[dev-dependencies]
+tempfile = "3.27.0"

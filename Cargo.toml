@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 exclude = ["spikes"]
-members = ["crates/cm-domain", "crates/cm-media", "crates/cm-store", "crates/cm-cli"]
+members = ["crates/cm-domain", "crates/cm-media", "crates/cm-store", "crates/cm-cli", "crates/cm-vision"]
 
 [workspace.package]
 edition = "2024"
